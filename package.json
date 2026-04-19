@@ -20,6 +20,7 @@
     "dev:react-introduction": "cd slides/02-react-introduction && slidev slides.md --port 3032",
     "dev:reducer-and-context": "cd slides/07-reducer-and-context && slidev slides.md --port 3037",
     "dev:refs-and-effects": "cd slides/08-refs-and-effects && slidev slides.md --port 3038",
+    "dev:routing": "cd slides/11-routing && slidev slides.md --port 3041",
     "dev:state": "cd slides/05-state && slidev slides.md --port 3035",
     "preview": "npx serve dist"
   },

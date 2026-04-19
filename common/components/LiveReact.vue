@@ -75,17 +75,134 @@ export default function App() {
   showNavigator: {
     type: Boolean,
     default: false
+  },
+  showUrlBar: {
+    type: Boolean,
+    default: false
   }
 });
 
 const template = 'react';
 
+const URL_BAR_STYLES = `.__lw-browser {
+  background: #e2e8f0;
+  border-bottom: 1px solid #cbd5e1;
+  padding: 8px 12px;
+  font-family: system-ui, sans-serif;
+}
+.__lw-controls { display: flex; gap: 6px; margin-bottom: 8px; }
+.__lw-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.__lw-red { background: #ef4444; }
+.__lw-yellow { background: #eab308; }
+.__lw-green { background: #22c55e; }
+.__lw-toolbar { display: flex; align-items: center; gap: 8px; }
+.__lw-nav-btn {
+  width: 28px; height: 28px; padding: 0;
+  border: 1px solid #cbd5e1; background: white;
+  border-radius: 50%; cursor: pointer;
+  font-size: 14px; color: #475569;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit;
+}
+.__lw-nav-btn:hover { background: #f8fafc; color: #0f172a; }
+.__lw-nav-btn:active { background: #e2e8f0; }
+.__lw-url-bar {
+  flex: 1; background: white;
+  border: 1px solid #cbd5e1; border-radius: 20px;
+  padding: 8px 14px;
+  font-family: ui-monospace, monospace; font-size: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.__lw-lock { font-size: 12px; }
+.__lw-origin { color: #94a3b8; }
+.__lw-path { color: #0ea5e9; font-weight: 600; }
+body { margin: 0; }`;
+
+const URL_BAR_SCRIPT = `(function initUrlBar() {
+  var el = function(tag, className, text) {
+    var n = document.createElement(tag);
+    if (className) n.className = className;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  var root = el('div', '__lw-browser');
+  var controls = el('div', '__lw-controls');
+  controls.appendChild(el('span', '__lw-dot __lw-red'));
+  controls.appendChild(el('span', '__lw-dot __lw-yellow'));
+  controls.appendChild(el('span', '__lw-dot __lw-green'));
+
+  var backBtn = el('button', '__lw-nav-btn', '\\u2190');
+  backBtn.title = 'Back';
+  var forwardBtn = el('button', '__lw-nav-btn', '\\u2192');
+  forwardBtn.title = 'Forward';
+
+  var pathEl = el('span', '__lw-path');
+  var urlBar = el('div', '__lw-url-bar');
+  urlBar.appendChild(el('span', '__lw-lock', '\\uD83D\\uDD12'));
+  urlBar.appendChild(el('span', '__lw-origin', 'https://demo.local'));
+  urlBar.appendChild(pathEl);
+
+  var toolbar = el('div', '__lw-toolbar');
+  toolbar.appendChild(backBtn);
+  toolbar.appendChild(forwardBtn);
+  toolbar.appendChild(urlBar);
+  root.appendChild(controls);
+  root.appendChild(toolbar);
+
+  var mount = function() { document.body.insertBefore(root, document.body.firstChild); };
+  if (document.body) mount();
+  else document.addEventListener('DOMContentLoaded', mount);
+
+  var sync = function() { pathEl.textContent = window.location.pathname + window.location.search; };
+
+  backBtn.addEventListener('click', function() { window.history.back(); });
+  forwardBtn.addEventListener('click', function() { window.history.forward(); });
+
+  var origPush = history.pushState;
+  history.pushState = function() {
+    var r = origPush.apply(this, arguments);
+    window.dispatchEvent(new Event('__lw-urlchange'));
+    return r;
+  };
+  var origReplace = history.replaceState;
+  history.replaceState = function() {
+    var r = origReplace.apply(this, arguments);
+    window.dispatchEvent(new Event('__lw-urlchange'));
+    return r;
+  };
+
+  window.addEventListener('popstate', sync);
+  window.addEventListener('__lw-urlchange', sync);
+  sync();
+})();`;
+
+const urlBarIndexJs = `import React, { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App";
+
+// URL bar — injectat automat de LiveReact (showUrlBar=true)
+const __lwStyle = document.createElement('style');
+__lwStyle.textContent = ${JSON.stringify(URL_BAR_STYLES)};
+document.head.appendChild(__lwStyle);
+
+${URL_BAR_SCRIPT}
+
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);`;
+
 const sandpackFiles = computed(() => {
-  if (props.files) {
-    return props.files;
-  }
+  const base = props.files || { '/App.js': props.code };
+  if (!props.showUrlBar) return base;
+
+  // Only override /index.js if user didn't provide one
+  if (base['/index.js']) return base;
+
   return {
-    '/App.js': props.code,
+    ...base,
+    '/index.js': { code: urlBarIndexJs, hidden: true }
   };
 });
 

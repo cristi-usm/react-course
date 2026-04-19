@@ -33,6 +33,7 @@ const modules = [
   '08-refs-and-effects',
   '09-fetching',
   '10-performance',
+  '11-routing',
 ]
 
 // Determine completion status
@@ -60,6 +61,7 @@ const devPorts = {
   '08-refs-and-effects': 3038,
   '09-fetching': 3039,
   '10-performance': 3040,
+  '11-routing': 3041,
 }
 
 // Detect environment

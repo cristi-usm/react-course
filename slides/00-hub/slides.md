@@ -107,10 +107,10 @@ color: sky-light
 />
 
 <ModuleCard
-  icon="❓"
-  title="În curând"
-  description="În curând"
-  disabled
+  module="11-routing"
+  icon="🧭"
+  title="11: Navigare & Rutare"
+  description="Client-side routing cu React Router v7"
 />
 
 <ModuleCard

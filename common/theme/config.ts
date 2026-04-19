@@ -10,7 +10,7 @@ export const THEME_CONFIG = {
   scheme: 'neversink-sky-light-scheme' as string,
 
   // The current active module. Modules before this one will be marked as complete.
-  currentModule: '10-performance' as string,
+  currentModule: '11-routing' as string,
 
   // You can also define custom CSS variables that will be available globally
   customVars: {} as Record<string, string>

@@ -74,6 +74,10 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  showUrlBar: {
+    type: Boolean,
+    default: false
+  },
   options: {
     type: Object,
     default: () => ({})
@@ -140,19 +144,158 @@ const consoleOnlyHTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+const URL_BAR_JS = `// URL bar auto-injectat de LiveWeb (showUrlBar=true).
+// Ascuns din tabs — vezi internals: construiește UI + patch-uie pushState.
+(function initUrlBar() {
+  const el = (tag, className, text) => {
+    const n = document.createElement(tag);
+    if (className) n.className = className;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+
+  const root = el('div', '__lw-browser');
+
+  const controls = el('div', '__lw-controls');
+  controls.append(
+    el('span', '__lw-dot __lw-red'),
+    el('span', '__lw-dot __lw-yellow'),
+    el('span', '__lw-dot __lw-green')
+  );
+
+  const backBtn = el('button', '__lw-nav-btn', '\u2190');
+  backBtn.title = 'Back';
+  const forwardBtn = el('button', '__lw-nav-btn', '\u2192');
+  forwardBtn.title = 'Forward';
+
+  const pathEl = el('span', '__lw-path');
+  const urlBar = el('div', '__lw-url-bar');
+  urlBar.append(
+    el('span', '__lw-lock', '\uD83D\uDD12'),
+    el('span', '__lw-origin', 'https://demo.local'),
+    pathEl
+  );
+
+  const toolbar = el('div', '__lw-toolbar');
+  toolbar.append(backBtn, forwardBtn, urlBar);
+  root.append(controls, toolbar);
+
+  const mount = () => document.body.prepend(root);
+  if (document.body) mount();
+  else document.addEventListener('DOMContentLoaded', mount);
+
+  const sync = () => { pathEl.textContent = window.location.pathname + window.location.search; };
+
+  backBtn.addEventListener('click', () => window.history.back());
+  forwardBtn.addEventListener('click', () => window.history.forward());
+
+  // pushState nu emite popstate — patch-uim ca să primim notificare
+  const origPush = history.pushState;
+  history.pushState = function (...args) {
+    const r = origPush.apply(this, args);
+    window.dispatchEvent(new Event('__lw-urlchange'));
+    return r;
+  };
+  const origReplace = history.replaceState;
+  history.replaceState = function (...args) {
+    const r = origReplace.apply(this, args);
+    window.dispatchEvent(new Event('__lw-urlchange'));
+    return r;
+  };
+
+  window.addEventListener('popstate', sync);
+  window.addEventListener('__lw-urlchange', sync);
+  sync();
+})();`;
+
+const URL_BAR_CSS = `.__lw-browser {
+  background: #e2e8f0;
+  border-bottom: 1px solid #cbd5e1;
+  padding: 8px 12px;
+  font-family: system-ui, sans-serif;
+}
+.__lw-controls { display: flex; gap: 6px; margin-bottom: 8px; }
+.__lw-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.__lw-red    { background: #ef4444; }
+.__lw-yellow { background: #eab308; }
+.__lw-green  { background: #22c55e; }
+.__lw-toolbar { display: flex; align-items: center; gap: 8px; }
+.__lw-nav-btn {
+  width: 28px; height: 28px; padding: 0;
+  border: 1px solid #cbd5e1; background: white;
+  border-radius: 50%; cursor: pointer;
+  font-size: 14px; color: #475569;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit;
+}
+.__lw-nav-btn:hover  { background: #f8fafc; color: #0f172a; }
+.__lw-nav-btn:active { background: #e2e8f0; }
+.__lw-url-bar {
+  flex: 1; background: white;
+  border: 1px solid #cbd5e1; border-radius: 20px;
+  padding: 8px 14px;
+  font-family: ui-monospace, monospace; font-size: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.__lw-lock   { font-size: 12px; }
+.__lw-origin { color: #94a3b8; }
+.__lw-path   { color: #0ea5e9; font-weight: 600; }`;
+
+function injectUrlBarIntoHtml(html) {
+  const linkTag = '<link rel="stylesheet" href="/__lw-url-bar.css">';
+  const scriptTag = '<script src="/__lw-url-bar.js"></' + 'script>';
+
+  let out = html;
+  if (out.includes('</head>')) {
+    out = out.replace('</head>', `  ${linkTag}\n</head>`);
+  } else {
+    out = linkTag + '\n' + out;
+  }
+  if (out.includes('<body>')) {
+    out = out.replace('<body>', `<body>\n  ${scriptTag}`);
+  } else {
+    out = out + '\n' + scriptTag;
+  }
+  return out;
+}
+
+const withUrlBar = (files) => {
+  if (!props.showUrlBar) return files;
+
+  const result = { ...files };
+
+  // Hidden helper files — always present, never shown in tabs
+  result['/__lw-url-bar.js'] = { code: URL_BAR_JS, hidden: true };
+  result['/__lw-url-bar.css'] = { code: URL_BAR_CSS, hidden: true };
+
+  // Inject <link> + <script> into index.html
+  const htmlEntry = result['/index.html'];
+  if (htmlEntry) {
+    if (typeof htmlEntry === 'string') {
+      result['/index.html'] = injectUrlBarIntoHtml(htmlEntry);
+    } else {
+      result['/index.html'] = {
+        ...htmlEntry,
+        code: injectUrlBarIntoHtml(htmlEntry.code)
+      };
+    }
+  }
+  return result;
+};
+
 const sandpackFiles = computed(() => {
   if (props.files) {
-    return props.files;
+    return withUrlBar(props.files);
   }
 
-  return {
+  return withUrlBar({
     '/index.html': props.consoleOnly ? consoleOnlyHTML : defaultHTML,
     '/index.js': props.code,
     '/styles.css': {
       code: defaultCSS.value,
       hidden: true
     }
-  };
+  });
 });
 
 const customSetup = computed(() => ({
