@@ -1566,6 +1566,179 @@ color: sky-light
 ---
 
 :: title ::
+# Cum transmitem date între pagini?
+
+:: content ::
+
+Avem **trei mecanisme**, fiecare cu rolul său:
+
+<div class="grid grid-cols-3 gap-4 text-sm mt-2 mb-5">
+
+<div class="bg-sky-50 border-2 border-sky-300 rounded-xl p-4 ">
+  <div class="font-bold text-sky-800 mb-2">1. Segmente <code>:param</code></div>
+  <div class="font-mono text-xs bg-white border border-sky-200 rounded px-2 py-1 mb-2">/produs/42</div>
+  <ul class="text-xs space-y-1 list-none m-0 p-0 ns-c-tight">
+    <li>✅ În URL — <strong>shareable</strong></li>
+    <li>✅ Păstrat la refresh</li>
+    <li>❌ Doar string-uri</li>
+    <li>❌ Apare public</li>
+  </ul>
+  <div class="text-xs mt-2 pt-2 border-t border-sky-200"><strong>Pentru:</strong> ID-uri esențiale</div>
+</div>
+
+<div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
+  <div class="font-bold text-amber-800 mb-2">2. Query string <code>?x=1</code></div>
+  <div class="font-mono text-xs bg-white border border-amber-200 rounded px-2 py-1 mb-2">/magazin?sort=pret</div>
+  <ul class="text-xs space-y-1 list-none m-0 p-0 ns-c-tight">
+    <li>✅ În URL — <strong>shareable</strong></li>
+    <li>✅ Păstrat la refresh</li>
+    <li>❌ Doar string-uri</li>
+    <li>❌ Apare public</li>
+  </ul>
+  <div class="text-xs mt-2 pt-2 border-t border-amber-200"><strong>Pentru:</strong> filtre, sortare, paginare</div>
+</div>
+
+<div class="bg-green-50 border-2 border-green-300 rounded-xl p-4">
+  <div class="font-bold text-green-800 mb-2">3. <code>navigate(to, &#123; state &#125;)</code></div>
+  <div class="font-mono text-xs bg-white border border-green-200 rounded px-2 py-1 mb-2">state: &#123; deUnde: '/lista' &#125;</div>
+  <ul class="text-xs space-y-1 list-none m-0 p-0 ns-c-tight">
+    <li>❌ <strong>NU</strong> apare în URL</li>
+    <li>✅ Păstrat la refresh</li>
+    <li>✅ Orice obiect serializabil</li>
+    <li>❌ NU shareable</li>
+  </ul>
+  <div class="text-xs mt-2 pt-2 border-t border-green-200"><strong>Pentru:</strong> context temporar între pagini</div>
+</div>
+
+</div>
+
+<AdmonitionType type="info">
+
+**Regula**: dacă datele ar trebui să fie **sharable** sau **bookmarkable**, pune-le în URL. Dacă sunt **context temporar** între două pagini (ex: "de unde am venit", o notificare după submit), folosește `state`.
+
+</AdmonitionType>
+
+
+---
+layout: top-title
+align: c
+color: sky-light
+---
+
+:: title ::
+# `navigate(to, { state })` — trimitem date
+
+:: content ::
+
+<div class="grid grid-cols-2 gap-6 text-sm">
+
+<div>
+
+**Pagina care trimite** — `navigate` cu `state`:
+
+```jsx
+import { useNavigate } from 'react-router';
+
+function ListaProduse({ produse }) {
+  const navigate = useNavigate();
+
+  const handleClick = (produs) => {
+    // Transmitem obiectul direct catre
+    // pagina urmatoare — NU prin URL.
+    navigate(`/produs/${produs.id}`, {
+      state: { produs, deUnde: 'lista' }
+    });
+  };
+  // ...
+}
+```
+
+</div>
+
+<div>
+
+**Pagina care primește** — `useLocation().state`:
+
+```jsx
+import { useLocation } from 'react-router';
+
+function PaginaProdus() {
+  const location = useLocation();
+  // state poate fi null → folosim ?? {}
+  const { produs, deUnde } = location.state ?? {};
+
+  return <h2>{produs?.nume}</h2>;
+}
+```
+
+</div>
+
+</div>
+
+
+---
+layout: top-title
+align: c
+color: sky-light
+---
+
+:: title ::
+# Cum funcționează `state` sub capotă?
+
+:: content ::
+
+React Router stochează `state` în **intrarea curentă din history a browserului** (`window.history.state`) — nu în URL.
+
+<div class="grid grid-cols-2 gap-6 text-sm mt-4">
+
+<div class="bg-sky-50 border-2 border-sky-300 rounded-xl p-4">
+
+**Consecințe:**
+
+- ✅ Supraviețuiește la **refresh**
+- ✅ Revine la **Back / Forward**
+- ❌ NU apare în URL
+- ❌ Un user care deschide direct URL-ul are `location.state === null`
+
+</div>
+
+<div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
+
+**⚠️ Atenție:**
+
+- Verifică mereu dacă `state` există: `location.state ?? {}`
+- Datele trebuie să fie **serializabile** (fără funcții, DOM nodes, Map/Set)
+- NU folosi `state` ca **singura sursă de adevăr** — la share linkul nu mai are datele
+
+</div>
+
+</div>
+
+
+---
+layout: top-title
+align: c
+color: sky-light
+margin: tight
+---
+
+:: title ::
+# State ascuns între pagini
+
+:: content ::
+
+Modifică produsul, apasă „Cumpara". La confirmare, observă că **URL-ul este `/confirmare`** — curat, fără `orderNumber` sau `total`. Datele au ajuns prin `state`. Fă **refresh** pe pagina de confirmare.
+
+<NavigateStateDemo />
+
+
+---
+layout: top-title
+align: c
+color: sky-light
+---
+
+:: title ::
 # `<NavLink>` — linkul activ automat
 
 :: content ::
