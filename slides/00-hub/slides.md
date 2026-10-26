@@ -113,27 +113,6 @@ color: sky-light
   description="Client-side routing cu React Router v7"
 />
 
-<ModuleCard
-  icon="❓"
-  title="În curând"
-  description="În curând"
-  disabled
-/>
-
-<ModuleCard
-  icon="❓"
-  title="În curând"
-  description="În curând"
-  disabled
-/>
-
-<ModuleCard
-  icon="❓"
-  title="În curând"
-  description="În curând"
-  disabled
-/>
-
 </div>
 
 <div class="mt-4 opacity-50 text-sm">
