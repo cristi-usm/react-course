@@ -631,12 +631,11 @@ function FancyButton({ onClick, disabled, children }) {
 <h4 class="text-xs font-black mb-2 text-center">Cu spread — concis</h4>
 
 ```jsx
-function FancyButton({ variant = 'primary', ...rest }) {
+function FancyButton({ variant = 'primary', children, ...rest }) {
   return (
-    <button
-      className={`fancy fancy--${variant}`}
-      {...rest}
-    />
+    <button className={`fancy fancy--${variant}`} {...rest}>
+      {children}
+    </button>
   );
 }
 <FancyButton variant="danger" onClick={fn} disabled>
